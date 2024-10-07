@@ -9,3 +9,7 @@ version = "0.1.0"
 [[package]]
 name = "mini-mio"
 version = "0.1.0"
+
+[[package]]
+name = "stackfull-coroutine"
+version = "0.1.0"

@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["a-stack-swap", "mini-mio"]
+members = ["a-stack-swap", "mini-mio", "stackfull-coroutine"]
