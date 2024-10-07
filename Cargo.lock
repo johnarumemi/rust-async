@@ -3,5 +3,9 @@
 version = 3
 
 [[package]]
+name = "a-stack-swap"
+version = "0.1.0"
+
+[[package]]
 name = "mini-mio"
 version = "0.1.0"
