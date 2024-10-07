@@ -5,4 +5,5 @@ members = [
     "mini-mio",
     "stackfull-coroutine",
     "stackless-coroutine",
+    "reactor-executor",
 ]
