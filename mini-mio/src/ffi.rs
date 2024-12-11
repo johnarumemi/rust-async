@@ -35,7 +35,12 @@ impl Event {
 // System calls
 // ------------------------------------------------------------
 
-pub const EPOLL_CTL_ADD: i32 = 1; // opcode for adding to epoll event queue
+// opcode for adding / deleting and modifying fd in epoll event queue
+// taken from : /usr/include/aarch64-linux-gnu/sys/epoll.h
+// NOTE: Not all of these are used in the code, but added here for reference.
+pub const EPOLL_CTL_ADD: i32 = 1; // Add a file descriptor to the interface.
+pub const EPOLL_CTL_DEL: i32 = 2; // Remove a file descriptor from the interface.
+pub const EPOLL_CTL_MOD: i32 = 3; // Change file descriptor epoll_event structure.
 
 // bitflags for events we are interested in
 pub const EPOLLIN: i32 = 0x1; // read operations on the file handle

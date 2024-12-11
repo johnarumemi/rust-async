@@ -1,0 +1,173 @@
+* Interesting extensions
+  - implement `try_clone` on Registry and enable sharing reference to it
+    across threads via `Arc<Registry>`.
+  -- NOTE: The drop implementation might need adjustment though, since it
+     closed the file descriptor.
+  - implement a level-triggered mode for epoll.
+  -- Also allow multiple threads to call `epoll_wait` on the same
+     underlying epoll file descriptor. See page 80 in the Asynchronous
+     Programming in Rust (Packt) Book.
+  - Setup a kqueue interface for MacOS and BSD.
+
+* Module Layout
+  - [epoll]{https://man7.org/linux/man-pages/man7/epoll.7.html}
+  - [kqueue]{https://man.freebsd.org/cgi/man.cgi?kqueue}
+
+** main
+   Main program entry point
+
+** ffi
+   This module contains the code related to the syscalls we need to
+   communicate with the host operating system.
+
+** poll
+   This module contains the main abstraction layer over the *epoll api*.
+
+* Core abstractions
+
+** poll::Poll
+   Represents the event queue itself: holds epoll file descriptor.
+
+**** methods:
+     - new: create a new event queue: `Self`
+     - `poll(&mut self)`: *block thread* via polling event queue. 
+     - registry: return a reference to Registry: `&Registry`
+
+
+** poll::Registry
+   Used for registering interest to be notified about events
+
+**** methods
+     - `register(&Source, interests)`: register interest in events
+       (interests) on a source, such as `std::net::TcpStream`.
+    ---
+    
+   The Registry wraps around a *Selector* object, that is conditionally
+   compiled so that *every platform has it's own Selector implementation*,
+   corresponding to the relevant syscalls to make IOCP, kqueue and epoll do
+   the same thing.
+
+
+* Why separate out Poll and Registry?
+
+  `Poll::poll(&mut self, ...)` takes an exclusive reference to
+  self while blocking, so it is not possible to register an interest on the
+  same thread while it is making a blocking call to the event queue. 
+
+  It also prevents having multiple threads calling `Poll::poll` on the same
+  underlying event queue, to have *multiple threads making a blocking call
+  to wait for events*. This would requires some form of synchronisation
+  (`Mutexes`) and essentially would make each call sequential anyway.
+
+  Hence the responsibility of registering events and the queue itself are kept
+  separate. This allows a registry to be shared via `Arc<Registry>` across
+  multiple threads, and enables them to register an interest to the Poll's
+  event queue, even while it's blocked waiting for notifications.
+  *This does need `try_clone` to be implemented on the `Registry` though*.
+
+  Overall, we will have 1 thread making a blocking call to the event queue
+  and have N threads registering interest.
+
+  |*NOTE*
+  This is not a limitation of epoll itself, as it does allow for multiple
+  threads to poll/block on the same event_queue. You can also specify how
+  threads should be woken up etc.
+  |end
+
+* FFI Epoll Functions
+
+** epoll_create(size)
+
+   - [Documentation]{https://man7.org/linux/man-pages/man2/epoll_create.2.html}
+
+   open an epoll file descriptor
+   @code c
+   #include <sys/epoll.h>
+
+   int epoll_create(int size);
+   @end
+    
+   The argument is there only for historical reasons and it will be
+   ignored, but it must be greater than 0.
+    
+   On success, these system calls return a file descriptor (a non-negative
+   integer).  On error, -1 is returned, and `errno` is set to indicate the
+   error. The error can be found via using `io::Error::last_os_error()`.
+
+
+** close(epfd)
+
+   - [Documentation]{https://man7.org/linux/man-pages/man2/close.2.html}
+
+   Close the epoll file descriptor.
+
+   @code c
+   #include <unistd.h>
+
+   int close(int fd);
+   @end
+
+** epoll_ctl(epfd: i32, op: i32, fd: i32, *event*: *mut Event)
+
+   - [Documentation]{https://man7.org/linux/man-pages/man2/epoll_ctl.2.html}
+
+   Control interface for an epoll file descriptor
+
+   This is the call we make to register our interest in an event.
+   It supports three operations:
+   - add a new file descriptor to the epoll instance = EPOLL_CTL_ADD
+   - modify an existing file descriptor in the epoll instance = EPOLL_CTL_MOD
+   - remove a file descriptor from the epoll instance = EPOLL_CTL_DEL
+
+    @code c
+    #include <sys/epoll.h>
+
+    int epoll_ctl(int epfd, int op, int fd, struct epoll_event *_Nullable event);
+    @end
+
+   - `epdf`: file descriptor returned by epoll_create
+   - `op`: one of EPOLL_CTL_ADD, EPOLL_CTL_MOD, EPOLL_CTL_DEL
+   --- These signify adding, modifying or deleting an interest on the epfd
+   - `fd`: target file descriptor (Source)
+
+*** The event (ffi) / epoll_event (c-api) parameter
+
+    - [Documentation]{https://man7.org/linux/man-pages/man3/epoll_event.3type.html}
+
+    The `epoll_event` argument describes the object linked to the file
+    descriptor `fd`. This is a more nuanced datastructure.
+
+
+    Our `Event` struct is a simplified version of the `epoll_event` struct.
+    @code rust
+    struct Event {
+      // bitmask of events that we are interested in
+      events: u32,
+
+      // token to identify event source
+      epoll_data: usize,
+    }
+    @end
+
+    - `events`: specifies what kind of events we are interested in being
+      notified about and it can also modify the behaviour of how and when
+      we get notified.
+
+    - `epoll_data`: We pass on piece of data to the kernel, that it will
+      return to us when it notifies us about the event on the epfd. This is
+      useful for *identifying the source of the original interest*, i.e.
+      what source the notification is for. 
+
+    *NOTE*: this structure is passed into to `epoll_ctl`, and it will be
+    returned to us in `epoll_wait` (the blocking call).
+
+**** C Representation
+     @code c
+     #include <sys/epoll.h>
+
+     struct epoll_event {
+       uint32_t      events;  /* Epoll events */
+       epoll_data_t  data;    /* User data variable */
+     };
+     @end
+

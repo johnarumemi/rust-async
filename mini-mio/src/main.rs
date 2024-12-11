@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     let num_events = 5; // max events we are interested in
 
     let mut streams = vec![];
-    let socket_addr = "localhost:8080";
+    let socket_addr = "host.docker.internal:8080";
     let mut handled_ids: HashSet<usize> = HashSet::new();
 
     for i in 0..num_events {

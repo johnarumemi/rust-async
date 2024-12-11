@@ -13,9 +13,8 @@ use crate::ffi;
 type Events = Vec<ffi::Event>;
 
 /// Represents the event queue itself.
-///
 pub struct Poll {
-    // a Registry is specific to an event queue / Poll instance
+    /// A Registry is specific to an event queue / Poll instance
     registry: Registry,
 }
 
@@ -29,6 +28,8 @@ impl Poll {
         }
 
         Ok(Self {
+            // The registry wraps the epoll file descriptor.
+            // When Poll is dropped, the registry is also dropped.
             registry: Registry { raw_fd: res },
         })
     }
@@ -43,12 +44,30 @@ impl Poll {
 
     /// Blocks the thread it's called on until an event is ready
     /// or it times out, whichever occurs first.
+    ///
+    /// # Arguments
+    ///
+    /// `events`: buffer for epoll to populate with Events from it's ready_list. timout: the maximum
+    /// amount of time to block on epoll_wait. A timeout of None means block until an event is
+    /// ready or a signal interrupts the call.
+    ///
+    /// # Other Information
+    ///
+    /// `maxevents`: the maximum number of events to return from epoll_wait, for now this is the
+    /// capacity of the events Vec. If there are more events in epoll's ready list than maxevents,
+    /// epoll will use a round-robin approach to return events. This prevents startvation of events
+    /// in the ready list, if only a few events were continually being returned.
     pub fn poll(&mut self, events: &mut Events, timeout: Option<i32>) -> Result<()> {
         let epfd = self.registry.raw_fd;
 
         // a timeout of -1 means block indefinitely
         let timeout = timeout.unwrap_or(-1);
         let max_events = events.capacity() as i32;
+
+        // Catch case where no buffer space has been allocated
+        if max_events == 0 {
+            events.reserve(10);
+        }
 
         // block on epoll_wait
         let res = unsafe { ffi::epoll_wait(epfd, events.as_mut_ptr(), max_events, timeout) };
@@ -59,7 +78,8 @@ impl Poll {
         }
 
         // On notification, `events` should be populated with at most max_events
-        // so we must set the length of `events`
+        // so we must set the length of `events`, which epoll would not have done when populating
+        // the buffer.
         unsafe { events.set_len(res as usize) };
         Ok(())
     }
