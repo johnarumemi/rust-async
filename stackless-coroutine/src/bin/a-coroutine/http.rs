@@ -23,7 +23,7 @@ pub struct Response {
 impl Http {
     /// Returns a future that yields the response of the HTTP request
     pub fn get(path: &str) -> impl Future<Output = Response> {
-        HttpGetFuture::new(path);
+        HttpGetFuture::new(path)
     }
 }
 
