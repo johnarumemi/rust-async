@@ -1,5 +1,9 @@
 # Description
-Progresses the work done in `a-coroutine`. The aim is to improve upon `a-coroutine` by avoiding having to use a sleep to contiously poll the future to determine if it's ready to make progress. Instead we will rely on a reactor and it's associated OS event_queue to notify an executor when a task is ready to be scheduled to be polled again. This should reduce the amount of busy looping we do to keep polling the future.
+Progresses the work done in `a-coroutine`. The aim is to improve upon `a-coroutine` by
+avoiding having to use a sleep to contiously poll the future to determine if it's ready
+to make progress. Instead we will rely on a reactor and it's associated OS event_queue
+to notify an executor when a task is ready to be scheduled to be polled again. This
+should reduce the amount of busy looping we do to keep polling the future.
 
 ### Usage
 Run with following:

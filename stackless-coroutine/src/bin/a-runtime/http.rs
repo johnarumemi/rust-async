@@ -2,7 +2,13 @@
 //!
 //! Makes only GET requests to the delayserver in `rust-async-utils`
 #![allow(unused)]
+use mio::{Interest, Token};
+
 use crate::future::{Future, PollState};
+
+// NEW: use public `registry` function to enable
+// HttpGetRequest to register interest with event queue
+use crate::runtime;
 
 static DELAYSERVER: &str = "127.0.0.1:8080";
 
@@ -78,7 +84,28 @@ impl Future for HttpGetFuture {
             // Send GET request and store created stream on future.
             println!("FIRST POLL - STARTING OPERATION - Make GET REQUEST");
             self.write_request();
-            return PollState::NotReady;
+
+            // NEW: get TcPStream. It should be a mio::net::TcpStream, hence
+            // already implements the mio `Source` trait.
+            let stream = self.stream.as_mut().unwrap();
+
+            // NEW: register source with event queue
+            let registry = runtime::registry();
+
+            // NEW: For now, the actual token we use is not important
+            let token = Token(0);
+
+            // NEW: only want to know when stream can be read from
+            let interests = Interest::READABLE;
+
+            // NEW: syscall to add source to inerest_list of OS event queue.
+            registry.register(stream, token, mio::Interest::READABLE);
+
+            // NEW: below was removed to enable us immediately poll the TcpStream.
+            // This means we will not return control to the scheduler if we happen
+            // to get the response immediately.
+
+            // return PollState::NotReady;
         }
 
         // Reach here if this is not first poll on the future.
