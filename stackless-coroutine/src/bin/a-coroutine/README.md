@@ -6,6 +6,12 @@ machines that represent some pause-able and resumable task that yields values to
 caller. This example will roll this back and manually create these state machines to
 provide an understanding of what is going on under the hood.
 
+### Usage
+Run with following:
+```bash
+cargo run -p stackless-coroutine --bin a-coroutine
+```
+
 ### Implements the following
 - A simplified `Future` trait
 - A simple HTTP client that can only make GET requests
@@ -21,7 +27,6 @@ These are to limit the scope of the example produced here.
 - Avoid macros
 
 # Requirements
-- `corofy` found within [rust-async-utils][1] (private repo)
 - `delayserver` found within [rust-async-utils][1] (private repo)
 
 [1]: https://github.com/johnarumemi/rust-async-utils "Rust Async Utils"
