@@ -15,9 +15,20 @@ fn main() {
         .arg("src/bin/a-runtime/main_async.rs")
         .arg("src/bin/a-runtime/main_corofy.rs")
         .output()
-        .expect("Failed to run corofy");
+        .expect("Failed to run corofy for `a-runtime");
+
+    println!("cargo::rerun-if-changed=stackless-coroutine/src/bin/a-runtime/main_async.rs");
+
+    Command::new("corofy")
+        .arg("src/bin/b-reactor-executor/main_async.rs")
+        .arg("src/bin/b-reactor-executor/main_corofy.rs")
+        .output()
+        .expect("Failed to run corofy for b-reactor-executor");
 
     // Tell cargo to rerun build script of below file changes
     println!("cargo::rerun-if-changed=build.rs");
     println!("cargo::rerun-if-changed=stackless-coroutine/src/bin/a-runtime/main_async.rs");
+    println!(
+        "cargo::rerun-if-changed=stackless-coroutine/src/bin/b-reactor-executor/main_async.rs"
+    );
 }
