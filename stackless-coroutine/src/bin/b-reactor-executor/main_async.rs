@@ -6,15 +6,11 @@
 
 use crate::future::{Future, PollState};
 use crate::http::{self, Http};
-use crate::runtime::Runtime;
+use crate::runtime::Waker;
 
 pub fn run() {
     let future = async_main();
 
-    // unlike the a-coroutine example, rather than directly polling the future in a loop,
-    // we create a runtime and pass the future to the Runtime. 
-    let mut runtime = Runtime::new();
-    runtime.block_on(future);
 }
 
 

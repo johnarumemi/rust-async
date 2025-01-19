@@ -2,13 +2,14 @@
 //!
 //! Makes only GET requests to the delayserver in `rust-async-utils`
 #![allow(unused)]
-use mio::{Interest, Token};
+use std::io::{ErrorKind, Read, Write};
 
-use crate::future::{Future, PollState};
+use mio::Interest;
 
-// NEW: use public `registry` function to enable
-// HttpGetRequest to register interest with event queue
-use crate::runtime;
+use crate::{
+    future::{Future, PollState},
+    runtime::{self, reactor, Waker},
+};
 
 static DELAYSERVER: &str = "127.0.0.1:8080";
 
@@ -77,7 +78,7 @@ impl Future for HttpGetFuture {
     ///    returning `ErrorKind::WouldBlock`.
     /// 3. Resolved, indicated by self.stream being Some and `stream.read`
     ///    returning 0 bytes.
-    fn poll(&mut self) -> PollState<Self::Output> {
+    fn poll(&mut self, &Waker) -> PollState<Self::Output> {
         // If stream is none, this is first time we are polling the future, so
         // "progressing" the future, means making a request to the delayserver.
         if self.stream.is_none() {

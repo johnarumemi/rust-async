@@ -1,11 +1,14 @@
 //! future related code
 #![allow(unused)]
 
+use crate::runtime::Waker;
+
 /// Represents some operation that will complete in the future
 /// and return a value of type `Future::Output`.
 pub trait Future {
     type Output;
-    fn poll(&mut self) -> PollState<Self::Output>;
+    // NEW: When we poll a future, we must now supply a Waker
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output>;
 }
 
 /// PollState is an enum that represents the state of a future.
@@ -37,7 +40,7 @@ pub struct JoinAll<F: Future> {
 impl<F: Future> Future for JoinAll<F> {
     type Output = Vec<<F as Future>::Output>;
 
-    fn poll(&mut self) -> PollState<Self::Output> {
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         // store resolved values from all futures and return them
         // when all futures are all resolved.
         let mut resolved_values = vec![];
@@ -48,7 +51,8 @@ impl<F: Future> Future for JoinAll<F> {
                 continue;
             }
 
-            match future.poll() {
+            // NEW: pass waker when polling the futures we are joining on
+            match future.poll(waker) {
                 PollState::NotReady => continue,
                 PollState::Ready(value) => {
                     // mark future as resolved

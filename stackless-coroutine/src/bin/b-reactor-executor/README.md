@@ -28,6 +28,10 @@ Executor --> Waker <-- Reactor
 Now the executor and reactor are not tightly coupled. This enables us to even
 use multiple reactors within a single runtime.
 
+⚠️ `corofy` does not know about Wakers, and we need to manually edit the generated
+`main_corofy.rs` file. So try not to make further changes to `main_async.rs`.
+
+
 ### Goals
 - Add a way for executor to *sleep* and *wake up*, that is not coupled to
   `mio::Poll`.
@@ -41,12 +45,6 @@ Run with following:
 ```bash
 cargo run -p stackless-coroutine --bin b-reactor-executor
 ```
-
-### Compromises
-These are to limit the scope of the example produced here.
-- Avoid error handling
-- Use concrete types and not generics
-- Avoid macros
 
 # Requirements
 - `corofy` found within [rust-async-utils][1] (private repo)
