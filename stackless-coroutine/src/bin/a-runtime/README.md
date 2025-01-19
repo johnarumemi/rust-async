@@ -11,6 +11,16 @@ Run with following:
 cargo run -p stackless-coroutine --bin a-runtime
 ```
 
+### Compromises
+These are to limit the scope of the example produced here.
+- Avoid error handling
+- Use concrete types and not generics
+- Avoid macros
+
+# Requirements
+- `corofy` found within [rust-async-utils][1] (private repo)
+- `delayserver` found within [rust-async-utils][1] (private repo)
+
 ### corofy
 This `build.rs` located at root of workspace member should auto-gen `main_corofy.rs`
 whenever changes are detected in `main_async.rs`. For clarity, when you make changes
@@ -39,16 +49,5 @@ In nvim config:
 ```
 
 
-### Compromises
-These are to limit the scope of the example produced here.
-- Avoid error handling
-- Use concrete types and not generics
-- Avoid macros
-
-# Requirements
-- `corofy` found within [rust-async-utils][1] (private repo)
-- `delayserver` found within [rust-async-utils][1] (private repo)
-
 [1]: https://github.com/johnarumemi/rust-async-utils "Rust Async Utils"
-
 
