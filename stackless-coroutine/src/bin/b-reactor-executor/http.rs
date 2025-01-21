@@ -2,7 +2,10 @@
 //!
 //! Makes only GET requests to the delayserver in `rust-async-utils`
 #![allow(unused)]
-use std::io::{ErrorKind, Read, Write};
+use std::{
+    io::{ErrorKind, Read, Write},
+    os::unix::raw::off_t,
+};
 
 use mio::Interest;
 
@@ -14,10 +17,6 @@ use crate::{
 static DELAYSERVER: &str = "127.0.0.1:8080";
 
 // traits and types from reading from a IO source
-use std::{
-    io::{ErrorKind, Read, Write},
-    os::unix::raw::off_t,
-};
 
 /// The main http client responsible for I/O operations via kernel
 ///
@@ -39,15 +38,20 @@ struct HttpGetFuture {
     /// data read from TCP stream is placed here
     buffer: Vec<u8>,
     path: String,
+    /// NEW: id retrieved from reactor for our source we want to track events on.
+    id: usize,
 }
 
 impl HttpGetFuture {
     fn new(path: &str) -> Self {
+        let id = reactor().next_id();
+
         Self {
             // do not connect yet, only on first poll
             stream: None,
             buffer: Vec::new(),
             path: path.to_string(),
+            id,
         }
     }
 
@@ -78,7 +82,7 @@ impl Future for HttpGetFuture {
     ///    returning `ErrorKind::WouldBlock`.
     /// 3. Resolved, indicated by self.stream being Some and `stream.read`
     ///    returning 0 bytes.
-    fn poll(&mut self, &Waker) -> PollState<Self::Output> {
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         // If stream is none, this is first time we are polling the future, so
         // "progressing" the future, means making a request to the delayserver.
         if self.stream.is_none() {
@@ -86,27 +90,19 @@ impl Future for HttpGetFuture {
             println!("FIRST POLL - STARTING OPERATION - Make GET REQUEST");
             self.write_request();
 
-            // NEW: get TcPStream. It should be a mio::net::TcpStream, hence
+            // It should be a mio::net::TcpStream, hence
             // already implements the mio `Source` trait.
             let stream = self.stream.as_mut().unwrap();
 
-            // NEW: register source with event queue
-            let registry = runtime::registry();
+            // NEW: register interest with event queue
+            reactor().register(stream, Interest::READABLE, self.id);
 
-            // NEW: For now, the actual token we use is not important
-            let token = Token(0);
+            // NEW: register waker we received when first polled.
+            reactor().set_waker(waker, self.id);
 
-            // NEW: only want to know when stream can be read from
-            let interests = Interest::READABLE;
-
-            // NEW: syscall to add source to inerest_list of OS event queue.
-            registry.register(stream, token, mio::Interest::READABLE);
-
-            // NEW: below was removed to enable us immediately poll the TcpStream.
+            // below was removed to enable us immediately poll the TcpStream.
             // This means we will not return control to the scheduler if we happen
             // to get the response immediately.
-
-            // return PollState::NotReady;
         }
 
         // Reach here if this is not first poll on the future.
@@ -121,6 +117,9 @@ impl Future for HttpGetFuture {
                     // we have reached end of buffer
                     let response = String::from_utf8_lossy(&*self.buffer).to_string();
 
+                    // NEW: No longer interested in notifications for this event source
+                    reactor().deregister(self.stream.as_mut().unwrap(), self.id);
+
                     return PollState::Ready(response);
                 }
                 Ok(n) => {
@@ -133,6 +132,13 @@ impl Future for HttpGetFuture {
                     // we would block, return NotReady
                     // also reach here if we are interrupted
                     // return PollState::NotReady;
+
+                    // NEW: we can reach here via been polled the first or subsequent times. We
+                    // must ensure that we always register the latest waker with the Reactor if we
+                    // are still waiting to be notified. This is because the future may have been
+                    // polled on a different executor between polls. So the piror waker stored in
+                    // reactor may be associated with the previous executor it was on.
+                    reactor().set_waker(waker, self.id);
                     break PollState::NotReady; // break and retun value from `loop`
                 }
                 Err(e) if e.kind() == ErrorKind::Interrupted => {

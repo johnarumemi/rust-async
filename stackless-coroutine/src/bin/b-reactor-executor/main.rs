@@ -12,9 +12,6 @@ mod runtime;
 #[cfg(test)]
 mod main_async;
 
-use future::{Future, PollState};
-use runtime::Runtime;
-
 fn main() {
     main_corofy::run();
 }

@@ -1,14 +1,14 @@
 //! Makes only GET requests to the delayserver in `rust-async-utils`
 #![allow(unused)]
-use crate::future::{Future, PollState};
-
-static DELAYSERVER: &str = "127.0.0.1:8080";
-
 // traits and types from reading from a IO source
 use std::{
     io::{ErrorKind, Read, Write},
     os::unix::raw::off_t,
 };
+
+use crate::future::{Future, PollState};
+
+static DELAYSERVER: &str = "127.0.0.1:8080";
 
 /// The main http client responsible for I/O operations via kernel
 ///

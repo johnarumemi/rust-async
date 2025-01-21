@@ -192,6 +192,7 @@ impl Executor {
 
             if task_count > 0 {
                 println!("{thread_name}: {task_count} pending tasks. Sleeping until woken up.");
+                thread::park()
             } else {
                 println!("{thread_name}: All tasks finished.");
                 break 'outer;
@@ -203,6 +204,8 @@ impl Executor {
 impl Waker {
     pub fn wake(&self) {
         // 1. Add wakers associated task to ready queue (let executor know it's ready to be polled)
+        // be careful of calling unpark before
+        // mutexguard is dropped.
         self.ready_queue
             .lock()
             .as_deref_mut()
@@ -212,5 +215,6 @@ impl Waker {
             .unwrap();
 
         // 2.  Unpark executor if it's yielded control back to the OS scheduler / is parked.
+        self.thread.unpark();
     }
 }

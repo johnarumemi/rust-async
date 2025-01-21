@@ -6,11 +6,17 @@
 
 use crate::future::{Future, PollState};
 use crate::http::{self, Http};
-use crate::runtime::Waker;
+use crate::runtime::{self, Waker};
 
 pub fn run() {
+    // initiaise the runtime
+    let mut executor = runtime::init();
+
+
+    // The main top-level future we start executor with
     let future = async_main();
 
+    executor.block_on(future);
 }
 
 
