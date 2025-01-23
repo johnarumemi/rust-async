@@ -216,5 +216,6 @@ impl Waker {
 
         // 2.  Unpark executor if it's yielded control back to the OS scheduler / is parked.
         self.thread.unpark();
+        println!("Waker {0} woke up executor.", self.id)
     }
 }
