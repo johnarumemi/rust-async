@@ -78,7 +78,7 @@ impl Future for HttpGetFuture {
     /// Below can be viewed as a simple state machine with 3 possible states.
     ///
     /// 1. Not Started: indicated by self.stream being None.
-    /// 2. Pending: indicatd by self.stream being Some and a read to `stream.read`
+    /// 2. Pending: indicated by self.stream being Some and a read to `stream.read`
     ///    returning `ErrorKind::WouldBlock`.
     /// 3. Resolved, indicated by self.stream being Some and `stream.read`
     ///    returning 0 bytes.
@@ -136,10 +136,10 @@ impl Future for HttpGetFuture {
                     // NEW: we can reach here via been polled the first or subsequent times. We
                     // must ensure that we always register the latest waker with the Reactor if we
                     // are still waiting to be notified. This is because the future may have been
-                    // polled on a different executor between polls. So the piror waker stored in
+                    // polled on a different executor between polls. So the prior waker stored in
                     // reactor may be associated with the previous executor it was on.
                     reactor().set_waker(waker, self.id);
-                    break PollState::NotReady; // break and retun value from `loop`
+                    break PollState::NotReady; // break and return value from `loop`
                 }
                 Err(e) if e.kind() == ErrorKind::Interrupted => {
                     // try reading again
