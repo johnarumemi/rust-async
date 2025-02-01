@@ -29,6 +29,12 @@ fn main() {
         .output()
         .expect("Failed to run corofy for a-coroutines-variables");
 
+    Command::new("corofy_waker")
+        .arg("src/bin/b-coroutines-references/main_async.rs")
+        .arg("src/bin/b-coroutines-references/main_corofy.rs")
+        .output()
+        .expect("Failed to run corofy for b-coroutines-references");
+
     // Tell cargo to rerun build script of below file changes
     println!("cargo::rerun-if-changed=stackless-coroutine/src/bin/a-runtime/main_async.rs");
     println!(
@@ -36,5 +42,8 @@ fn main() {
     );
     println!(
         "cargo::rerun-if-changed=stackless-coroutine/src/bin/a-coroutines-variables/main_async.rs"
+    );
+    println!(
+        "cargo::rerun-if-changed=stackless-coroutine/src/bin/b-coroutines-references/main_async.rs"
     );
 }
