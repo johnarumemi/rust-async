@@ -8,7 +8,7 @@ use std::{
 use crate::future::{Future, PollState};
 
 /// NEW: We define a Task as being a Future stored on the heap.
-/// Key thing to note is that our executor is interest is scheduling and polling `Tasks`.
+/// Key thing to note is that our executor is interested in scheduling and polling `Tasks`.
 /// These will be top-level futures.
 type Task = Box<dyn Future<Output = String>>;
 
@@ -158,6 +158,26 @@ impl Executor {
     where
         F: Future<Output = String> + 'static,
     {
+        // NEW: there are some futures that return Ready on first poll, so we add an optimisation
+        // to poll all futures at least once.
+        //
+        // WARNING: by polling the future once here, the future is thus located within the stack
+        // frame of the `block_on` function. The act of polling it results in self.stack.writer
+        // holding a reference to buffer, i.e. a self reference. The first poll returns `NotReady`,
+        // and so we spawn it, placing it within a Box, which moves the future onto the heap.
+        // The next time the future is polled, the stack will be restored. However, the reference
+        // held by self.stack.writer will be invalid as it is pointing to the old location on the
+        // stack where the future was located.
+        let mut waker = self.get_waker(usize::MAX);
+        let mut future = future;
+
+        match future.poll(&waker) {
+            // future needs to be waited on
+            PollState::NotReady => {}
+            // future is ready, no need to block, so return
+            PollState::Ready(_) => return,
+        }
+
         // spawn the future on the executor, making it a top-level task
         spawn(future);
 
