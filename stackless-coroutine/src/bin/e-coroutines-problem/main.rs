@@ -14,7 +14,7 @@ mod runtime;
 
 use crate::future::{Future, PollState};
 use crate::http::Http;
-use crate::runtime::{Executor, Waker};
+use crate::runtime::{Executor, MyWaker};
 
 pub fn main() {
     // initialise the runtime
@@ -98,7 +98,7 @@ impl Coroutine0 {
 impl Future for Coroutine0 {
     type Output = String;
 
-    fn poll(self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output> {
+    fn poll(self: Pin<&mut Self>, waker: &MyWaker) -> PollState<Self::Output> {
         // NEW: Get a mutable reference to future inside of Pin.
         // replace all instances of `self` with `coroutine` within
         // this implementation block.

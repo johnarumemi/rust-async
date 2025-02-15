@@ -12,7 +12,7 @@ use crate::future::{Future, PollState};
 mod executor;
 mod reactor;
 
-pub use executor::{spawn, Executor, Waker};
+pub use executor::{spawn, Executor, MyWaker};
 pub use reactor::reactor;
 
 pub fn init() -> Executor {

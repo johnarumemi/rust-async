@@ -9,11 +9,11 @@ use std::{
 
 use mio::{net::TcpStream, Events, Interest, Poll, Registry, Token};
 
-use crate::runtime::Waker;
+use crate::runtime::MyWaker;
 
 // ===================== END OF DEPENDENCIES =====================
 
-type Wakers = Arc<Mutex<HashMap<usize, Waker>>>;
+type Wakers = Arc<Mutex<HashMap<usize, MyWaker>>>;
 
 /// WARNING: This can be accessed from multiple threads.
 /// However, we use the OnceLock to ensure that we only initialise the Reactor once.
@@ -48,7 +48,7 @@ impl Reactor {
             .expect("Failed to register stream with reactor");
     }
 
-    pub fn set_waker(&self, waker: &Waker, id: usize) {
+    pub fn set_waker(&self, waker: &MyWaker, id: usize) {
         let _ = self
             .wakers
             .lock()

@@ -12,7 +12,7 @@ use mio::Interest;
 
 use crate::{
     future::{Future, PollState},
-    runtime::{self, reactor, Waker},
+    runtime::{self, reactor, MyWaker},
 };
 
 static DELAYSERVER: &str = "127.0.0.1:8080";
@@ -86,7 +86,7 @@ impl Future for HttpGetFuture {
     ///    returning `ErrorKind::WouldBlock`.
     /// 3. Resolved, indicated by self.stream being Some and `stream.read`
     ///    returning 0 bytes.
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, waker: &MyWaker) -> PollState<Self::Output> {
         // If stream is none, this is first time we are polling the future, so
         // "progressing" the future, means making a request to the delayserver.
 
