@@ -33,6 +33,9 @@ dependencies = [
 [[package]]
 name = "reactor-executor"
 version = "0.1.0"
+dependencies = [
+ "mio",
+]
 
 [[package]]
 name = "stackfull-coroutine"
